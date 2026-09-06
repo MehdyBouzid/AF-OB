@@ -10,11 +10,15 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "intervenant")
 public class Intervenant {
-@Id
-@GeneratedValue(strategy=GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length= 255)
+    @Column(nullable = false, length = 255)
+    private String prenom;
+
+    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
     @Column(name = "password_hash", nullable = false, length = 255)
@@ -23,9 +27,19 @@ public class Intervenant {
     public Long getId() {
         return id;
     }
+
+    public String getPrenom() {
+        return prenom;
+    }
+
+    public void setPrenom(String prenom) {
+        this.prenom = prenom;
+    }
+
     public String getEmail() {
         return email;
     }
+
     public void setEmail(String email) {
         this.email = email;
     }
@@ -34,7 +48,7 @@ public class Intervenant {
         return passwordHash;
     }
 
-    public void  setPasswordHash(String passwordHash) {
-        this.passwordHash=passwordHash;
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 }

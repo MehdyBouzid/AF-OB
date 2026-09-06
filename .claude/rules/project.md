@@ -6,9 +6,18 @@ Pour tout choix important concernant la sécurité, les données, les transactio
 
 ## Objectif métier
 
-AF-OB présente les prestations de deux entreprises collaboratrices et permet aux clients de demander un rendez-vous sans créer de compte.
+AF-OB présente les prestations de deux entreprises collaboratrices et permet aux clients de demander un rendez-vous ou un devis sans créer de compte.
 
-Parcours principal :
+Les prestations se divisent en deux catégories :
+
+- **Tarif fixe** : le client choisit une prestation, un intervenant et un créneau directement.
+- **Sur devis** : le tarif dépend de l'état du véhicule ou de la nature du travail. Le client soumet une demande de devis ; le gérant établit le devis avant toute prise de rendez-vous.
+
+Prestations sur devis confirmées :
+- **Nettoyage intérieur véhicule** (voiture et camionnette regroupées dans la catégorie « véhicule ») — à partir de 70 €. La demande de devis inclut les informations du client et une photo de l'intérieur du véhicule.
+- **Vitres** — sur devis.
+
+### Parcours prestation à tarif fixe
 
 ```text
 consulter les prestations et tarifs
@@ -21,6 +30,20 @@ consulter les prestations et tarifs
 → l'intervenant accepte ou refuse
 → un rendez-vous accepté bloque le créneau
 → le planning et le client sont suivis
+```
+
+### Parcours prestation sur devis
+
+```text
+consulter les prestations
+→ choisir une prestation sur devis
+→ saisir les informations du client
+→ joindre une photo de l'intérieur du véhicule si nécessaire
+→ envoyer la demande de devis (enregistrée en base)
+→ le gérant consulte la demande dans son espace de gestion
+→ le gérant détermine le montant et rédige la réponse
+→ le backend envoie la réponse par email au client
+→ le rendez-vous est organisé après traitement du devis
 ```
 
 Les deux intervenants travaillent indépendamment : chacun possède ses disponibilités, ses demandes et son planning.
@@ -56,7 +79,6 @@ Pour Angular, utiliser les scripts réellement définis dans `frontend/package.j
 
 Les points suivants ne sont pas encore des faits établis. Ne pas les traiter comme acquis et vérifier avec Mehdy avant de les implémenter :
 
-- **Authentification** : Spring Security envisagé pour les intervenants ; le mécanisme exact, par exemple session avec cookie HttpOnly ou token, reste à valider avant la feature `auth`.
 - **Déploiement** : Render envisagé, à confirmer.
 - **Déplacement d'un rendez-vous** : fonctionnalité non définie. Ne pas développer de comportement définitif avant d'avoir validé qui peut déplacer, dans quelles conditions et avec quelle vérification de disponibilité.
 
@@ -74,6 +96,7 @@ backend/src/main/java/com/afob/backend/
 ├── intervenant/
 ├── disponibilite/
 ├── rendezvous/
+├── demandedevis/
 ├── notification/
 └── auth/
 ```
@@ -146,6 +169,17 @@ Ces conventions indiquent comment utiliser les frameworks du projet. Elles ne tr
 - Utiliser des codes cohérents : `200` pour un succès avec réponse, `201` pour une création, `204` lorsqu'une opération réussit sans corps, `400` pour une entrée invalide, `401` si l'utilisateur n'est pas authentifié, `403` si l'accès est refusé, `404` si la ressource n'existe pas et `409` pour un conflit avec l'état actuel, par exemple un créneau déjà réservé.
 - Utiliser un format JSON cohérent pour les erreurs de tous les endpoints.
 
+### Authentification
+
+- Spring Security est utilisé pour l'authentification des intervenants.
+- L'email est l'identifiant de connexion.
+- Les mots de passe sont hashés avec BCrypt via le `PasswordEncoder` de Spring Security. Ils ne sont jamais stockés en clair.
+- L'authentification utilise une session serveur avec cookie HttpOnly. JWT n'est pas utilisé pour cette V1.
+- Il n'y a aucune inscription publique. Les comptes intervenants sont créés manuellement par l'administrateur/développeur.
+- Le Repository est responsable uniquement de l'accès aux données, notamment la recherche d'un intervenant par email (`findByEmail`).
+- Le Service porte la logique métier de récupération de l'intervenant et gère le cas où aucun intervenant ne correspond à l'email fourni.
+- `IntervenantNotFoundException` est levée lorsque l'intervenant recherché n'existe pas.
+
 ### Tests
 
 - Utiliser `@WebMvcTest` pour tester un Controller isolé.
@@ -167,6 +201,18 @@ Ces conventions indiquent comment utiliser les frameworks du projet. Elles ne tr
 - Une annulation doit libérer le créneau correspondant de manière cohérente.
 - Une notification externe ne doit être déclenchée qu'après la réussite de la décision métier et de la transaction associée.
 
+### Règles spécifiques aux prestations sur devis
+
+- Une prestation sur devis ne permet pas au client de choisir un créneau directement.
+- Une demande de devis véhicule doit inclure les informations du client et une photo de l'intérieur du véhicule.
+- Voiture et camionnette sont regroupées dans la catégorie « véhicule » pour le nettoyage intérieur.
+- Le formulaire soumis par le client constitue une demande de devis, pas un devis.
+- La demande est enregistrée et consultable par le gérant depuis son espace de gestion.
+- Le gérant analyse la demande et détermine lui-même le montant.
+- Le gérant rédige lui-même la réponse depuis son espace de gestion ; le backend envoie ensuite cette réponse par email au client.
+- Le rendez-vous est organisé seulement après le traitement du devis.
+- Le mécanisme d'acceptation du devis par le client n'est pas encore défini : ne pas l'implémenter avant confirmation.
+
 Ne pas placer ces décisions dans le Controller ou le Repository.
 
 Le déplacement d'un rendez-vous n'est pas couvert : voir « Décisions à valider ».
@@ -176,7 +222,8 @@ Le déplacement d'un rendez-vous n'est pas couvert : voir « Décisions à valid
 Développer progressivement, sans introduire tous les concepts simultanément.
 
 1. **`prestation`** — premier CRUD servant de gabarit : Entity JPA, Repository, Service, Controller, DTO et validation selon les besoins réels.
-2. **`intervenant`** — modèle des deux intervenants et relations nécessaires.
+2. **`demandedevis`** — demande de devis sans compte client, avec upload de photo pour les prestations véhicule. À développer après `prestation` et avant `rendezvous`.
+3. **`intervenant`** — modèle des deux intervenants et relations nécessaires.
 3. **Décision et authentification minimale** — avant de créer des routes privées, présenter les mécanismes pertinents, leurs compromis et une recommandation. Attendre la validation explicite de Mehdy, puis implémenter une authentification réelle avec le mécanisme retenu, en utilisant Spring Security s'il est confirmé. Ne pas utiliser une identité fixe comme mécanisme de sécurité.
 4. **`disponibilite`** — dates, horaires, créneaux propres à chaque intervenant et requêtes utiles au planning.
 5. **`rendezvous`** — demande sans compte client, relations entre prestation, intervenant et créneau, statuts et transitions.
@@ -189,6 +236,8 @@ Développer progressivement, sans introduire tous les concepts simultanément.
 Tester en priorité :
 
 - la création et la validation d'une prestation ;
+- la soumission d'une demande de devis avec photo ;
+- le rejet d'une demande de devis incomplète (sans photo pour un véhicule) ;
 - la visibilité des créneaux par intervenant ;
 - la création d'une demande de rendez-vous ;
 - le refus d'une demande déjà traitée ;
