@@ -247,6 +247,79 @@ Tester en priorité :
 - les autorisations d'accès ;
 - l'annulation d'un rendez-vous.
 
+## État d'avancement (à mettre à jour après chaque session significative)
+
+### Branche active : `feature/auth-intervenant`
+
+`main` et `dev` contiennent uniquement le commit initial (squelette vide). Tout le travail réalisé est sur `feature/auth-intervenant`, non encore mergée.
+
+### Feature `auth` — implémentée, nettoyée, prête à merger
+
+Implémenté et committé :
+
+- `Intervenant` entity (id, prenom, email, passwordHash)
+- `IntervenantRepository` (`findByEmail`)
+- `IntervenantService` (`findByEmail`, lève `IntervenantNotFoundException`)
+- `IntervenantUserDetailsService` (adapte `Intervenant` vers `UserDetails`)
+- `AuthenticationService` (délègue à `AuthenticationManager`)
+- `AuthController` (`POST /auth/login`, `GET /auth/csrf`)
+- `SecurityConfig` (BCrypt, `DaoAuthenticationProvider`, session HttpOnly, `CookieCsrfTokenRepository`, `CsrfTokenRequestAttributeHandler`, `AuthenticationEntryPoint` JSON UTF-8, routes publiques : `/auth/login` et `/auth/csrf`)
+- `WebConfig` (CORS configuré via `FRONTEND_URL`)
+- `LoginRequestDto` (record, `@NotBlank`, `@Email`, `@Size`)
+- `IntervenantNotFoundException` (extends `UsernameNotFoundException`)
+- Migration Flyway `V2` : table `intervenant`
+
+Non implémenté (hors périmètre de cette feature) : `GET /auth/me` n'existe pas. Il a été utilisé uniquement comme route protégée arbitraire lors des tests manuels curl pour vérifier qu'une requête sans session retourne bien 401.
+
+Corrections appliquées en session (non encore committées) :
+
+- 403 → 401 pour les requêtes non authentifiées : `AuthenticationEntryPoint` personnalisé dans `exceptionHandling()`
+- Corps d'erreur JSON structuré avec encodage UTF-8
+- `GET /auth/csrf` ajouté pour exposer le token CSRF avant login (nécessaire avec la génération lazy de Spring Security 6+)
+- `CsrfTokenRequestAttributeHandler` configuré (corrige le bug XOR du handler par défaut)
+- `AuthDto.java` supprimé (classe vide, aucun usage)
+- Import `AbstractHttpConfigurer` inutilisé supprimé de `SecurityConfig`
+- Propriétés erreur corrigées : `spring.web.error.*` (Spring Boot 4.x)
+
+Tests manuels effectués le 2026-09-07 (curl + PostgreSQL réel), état après corrections :
+
+| Test | Résultat | Attendu | OK ? |
+|---|---|---|---|
+| Route protégée sans cookie | 401, JSON | 401 | Oui |
+| `POST /auth/login` mauvais mdp | 401, JSON | 401 | Oui |
+| `POST /auth/login` bon mdp | 200 + JSESSIONID | 200 | Oui |
+| Route protégée inconnue avec cookie | 404 sans trace Java | 404 | Oui |
+
+Tests automatisés (`@WebMvcTest`) : **7/7 — BUILD SUCCESS**
+
+- `routeProtegee_sansAuthentification_renvoie401`
+- `login_identifiantsValides_renvoie200`
+- `login_mauvaisMotDePasse_renvoie401`
+- `login_motDePasseTropCourt_renvoie400`
+- `login_sansTokenCsrf_renvoie403`
+- `login_identifiantsValides_sauvegardeContexteSecurite`
+- `BackendApplicationTests#contextLoads`
+
+Reste à faire avant merge :
+
+- Commit du nettoyage en attente (modifications non stagées)
+
+### Feature `prestation` — squelettes vides uniquement
+
+Présents dans le code mais vides : `PrestationController`, `Prestation`, `PrestationDto`.
+Migration `V1` : fichier SQL vide.
+À implémenter en entier après le merge de `auth` dans `dev`.
+
+### Features non commencées
+
+`demandedevis`, `disponibilite`, `rendezvous`, `notification`, `intervenant` (feature dédiée).
+
+### Frontend
+
+Dossier `frontend/` inexistant. Angular non commencé.
+
+---
+
 ## Évolution de cette règle
 
 Ne pas conserver d'état temporaire tel que « projet non initialisé ».
