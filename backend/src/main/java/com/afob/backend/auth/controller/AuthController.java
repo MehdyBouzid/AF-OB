@@ -37,7 +37,6 @@ public class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse
     ) {
-    // il va repondre au la demande de l'authentification
         Authentication authentication =
                 authenticationService.authenticate(
                         request.email(),
@@ -64,5 +63,4 @@ public class AuthController {
         csrfToken.getToken();
         return ResponseEntity.ok().build();
     }
-
 }
