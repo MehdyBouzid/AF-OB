@@ -1,12 +1,14 @@
 package com.afob.backend.prestation.entity;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import java.math.BigDecimal;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
@@ -18,7 +20,8 @@ public class Prestation {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type_tarification", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "type_tarification", columnDefinition = "tarif", nullable = false)
     private TypeTarification typeTarification;
 
     @Column(nullable = false, length = 255)
@@ -28,9 +31,9 @@ public class Prestation {
     private String description;
 
     @Column(nullable = false)
-    private Boolean active;
+    private boolean active;
 
-    @Column(name = "prix_minimum",  precision = 10, scale = 2)
+    @Column(name = "prix_minimum", precision = 10, scale = 2)
     private BigDecimal prixMinimum;
 
     public Long getId() {
@@ -57,7 +60,7 @@ public class Prestation {
         return active;
     }
 
-    public void setActive(Boolean active) {
+    public void setActive(boolean active) {
         this.active = active;
     }
 
@@ -68,8 +71,9 @@ public class Prestation {
     public void setTypeTarification(TypeTarification typeTarification) {
         this.typeTarification = typeTarification;
     }
+
     public BigDecimal getPrixMinimum() {
-     return prixMinimum;
+        return prixMinimum;
     }
 
     public void setPrixMinimum(BigDecimal prixMinimum) {
