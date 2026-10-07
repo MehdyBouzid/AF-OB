@@ -10,6 +10,12 @@ import java.util.Map;
 @RestControllerAdvice
 public class PrestationExceptionHandler {
 
+    @ExceptionHandler(PrestationValidationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handlePrestationValidation(PrestationValidationException ex) {
+        return Map.of("message", ex.getMessage());
+    }
+
     @ExceptionHandler(PrestationNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handlePrestationNotFound(PrestationNotFoundException ex) {
