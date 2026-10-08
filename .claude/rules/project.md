@@ -14,7 +14,7 @@ Les prestations se divisent en deux catégories :
 - **Sur devis** : le tarif dépend de l'état du véhicule ou de la nature du travail. Le client soumet une demande de devis ; le gérant établit le devis avant toute prise de rendez-vous.
 
 Prestations sur devis confirmées :
-- **Nettoyage intérieur véhicule** (voiture et camionnette regroupées dans la catégorie « véhicule ») — à partir de 70 €. La demande de devis inclut les informations du client et une photo de l'intérieur du véhicule.
+- **Nettoyage intérieur véhicule** (voiture et camionnette regroupées dans la catégorie « véhicule ») — prix indicatif [À VÉRIFIER] : deux supports affichent respectivement « dès 60 € » et « à partir de 70 € ». Ne pas fixer le montant avant confirmation.
 - **Vitres** — sur devis.
 
 ### Parcours prestation à tarif fixe
@@ -22,6 +22,7 @@ Prestations sur devis confirmées :
 ```text
 consulter les prestations et tarifs
 → choisir une prestation
+→ choisir une formule tarifaire (libellé + prix fixe)
 → choisir un intervenant
 → consulter ses disponibilités
 → choisir une date et un créneau
@@ -37,6 +38,7 @@ consulter les prestations et tarifs
 ```text
 consulter les prestations
 → choisir une prestation sur devis
+→ choisir le patron destinataire
 → saisir les informations du client
 → joindre une photo de l'intérieur du véhicule si nécessaire
 → envoyer la demande de devis (enregistrée en base)
@@ -47,6 +49,11 @@ consulter les prestations
 ```
 
 Les deux intervenants travaillent indépendamment : chacun possède ses disponibilités, ses demandes et son planning.
+
+Les deux patrons partagent les mêmes droits et fonctionnalités — un seul niveau d'accès est nécessaire.
+Le catalogue `Prestation` est commun aux deux patrons, sans ownership individuel.
+L'ownership concerne uniquement les données individuelles : disponibilités, demandes, rendez-vous et planning.
+L'identité du patron connecté provient exclusivement de la session serveur — jamais d'un paramètre fourni par le frontend.
 
 Le paiement est réalisé après la prestation, par carte ou espèces. Aucun paiement en ligne n'est prévu.
 
@@ -81,6 +88,10 @@ Les points suivants ne sont pas encore des faits établis. Ne pas les traiter co
 
 - **Déploiement** : Render envisagé, à confirmer.
 - **Déplacement d'un rendez-vous** : fonctionnalité non définie. Ne pas développer de comportement définitif avant d'avoir validé qui peut déplacer, dans quelles conditions et avec quelle vérification de disponibilité.
+- **Mécanisme d'acceptation du devis par le client** : le client reçoit la réponse par email, mais la suite du parcours (acceptation, prise de RDV) n'est pas encore définie. Ne pas implémenter avant confirmation.
+- **Tarif indicatif véhicule** : deux supports affichent des montants différents (60 € / 70 €). À vérifier avant tout affichage ou enregistrement de valeur.
+- **Application mobile** : une application Ionic + Angular est envisagée pour une version ultérieure. Hors périmètre V1.
+- **Statut des formules lors de la désactivation d'une prestation FIXE** : lorsqu'un patron désactive une prestation, les formules doivent-elles conserver leur statut individuel actif/inactif, ou être toutes désactivées automatiquement ? Option recommandée (non validée) : les formules conservent leur statut interne — elles ne sont simplement plus disponibles tant que la prestation est désactivée, et les formules encore actives redeviennent disponibles à la réactivation. À trancher avant d'implémenter le comportement de désactivation/réactivation des prestations.
 
 ## Architecture
 
@@ -201,17 +212,65 @@ Ces conventions indiquent comment utiliser les frameworks du projet. Elles ne tr
 - Une annulation doit libérer le créneau correspondant de manière cohérente.
 - Une notification externe ne doit être déclenchée qu'après la réussite de la décision métier et de la transaction associée.
 
+### Règles de tarification — [VALIDÉ]
+
+**Prestations FIXE :**
+- Une prestation FIXE possède une ou plusieurs formules tarifaires (`VarianteTarifaire`).
+- Chaque formule possède un libellé et un prix fixe.
+- Le client choisit sa formule avant de demander un rendez-vous.
+- Exemples validés :
+  - Canapé : 2–4 places 70 €, 5–6 places 90 €, 7–8 places 130 €
+  - Matelas : 1 place 60 €, 2 places 90 €
+- `prixMinimum` sur l'entité `Prestation` est `null` pour les prestations FIXE (le prix est porté par les formules).
+
+**Prestations DEVIS :**
+- Le prix final est déterminé par le patron après étude de la demande.
+- `prixMinimum` est facultatif. S'il est renseigné, afficher « À partir de X € ». Sinon, afficher « Sur devis ».
+- Le tarif indicatif pour le nettoyage véhicule reste [À VÉRIFIER] : voir « Décisions à valider ».
+
+**`VarianteTarifaire` — [VALIDÉ, non implémenté]**
+Le concept est validé et nécessaire pour les prestations FIXE. La classe Java et la migration V4 existent mais sont vides. L'implémentation est à réaliser.
+
+**Création des formules — [VALIDÉ]**
+- Une prestation FIXE doit posséder au moins une formule tarifaire valide dès sa création.
+- Une prestation FIXE créée est active par défaut et possède donc au moins une formule active.
+
+**Gestion des formules — [VALIDÉ]**
+- Les deux patrons peuvent ajouter des formules au catalogue commun.
+- Une formule peut être activée, désactivée et réactivée — jamais supprimée physiquement.
+- Pour modifier le prix ou le libellé d'une formule active, le patron doit obligatoirement la désactiver au préalable.
+- Une formule désactivée reste modifiable.
+- Une formule désactivée n'est plus sélectionnable pour les nouvelles demandes.
+- Une formule réactivée redevient sélectionnable lorsque sa prestation est active.
+
+**Cohérence prestation / formules — [VALIDÉ]**
+- Une prestation FIXE active doit toujours conserver au moins une formule active.
+- Pour désactiver la dernière formule active d'une prestation, le patron doit d'abord désactiver la prestation entière.
+- Une prestation désactivée peut conserver ses formules sans les supprimer.
+
+**Historique des tarifs — [VALIDÉ]**
+- Lorsqu'un client envoie une demande de rendez-vous FIXE, le prix de la formule choisie est conservé dans cette demande.
+- Les modifications ultérieures du catalogue ne changent pas le prix des demandes déjà enregistrées.
+- Les nouveaux tarifs s'appliquent uniquement aux nouvelles demandes.
+
+### Règles de gestion du catalogue — [VALIDÉ]
+
+- `nom`, `description` et `typeTarification` sont obligatoires à la création.
+- Une prestation est active par défaut à la création.
+- Les prestations sont désactivées ou réactivées — jamais supprimées physiquement.
+
 ### Règles spécifiques aux prestations sur devis
 
 - Une prestation sur devis ne permet pas au client de choisir un créneau directement.
+- Le client choisit le patron destinataire de sa demande de devis. La demande lui est rattachée.
 - Une demande de devis véhicule doit inclure les informations du client et une photo de l'intérieur du véhicule.
 - Voiture et camionnette sont regroupées dans la catégorie « véhicule » pour le nettoyage intérieur.
 - Le formulaire soumis par le client constitue une demande de devis, pas un devis.
-- La demande est enregistrée et consultable par le gérant depuis son espace de gestion.
-- Le gérant analyse la demande et détermine lui-même le montant.
-- Le gérant rédige lui-même la réponse depuis son espace de gestion ; le backend envoie ensuite cette réponse par email au client.
+- La demande est enregistrée et consultable par le patron destinataire depuis son espace de gestion.
+- Le patron analyse la demande et détermine lui-même le montant.
+- Le patron rédige lui-même la réponse depuis son espace de gestion ; le backend envoie ensuite cette réponse par email au client.
 - Le rendez-vous est organisé seulement après le traitement du devis.
-- Le mécanisme d'acceptation du devis par le client n'est pas encore défini : ne pas l'implémenter avant confirmation.
+- Le mécanisme d'acceptation du devis par le client et la prise de RDV qui suit restent [À DÉCIDER] : voir « Décisions à valider ».
 
 Ne pas placer ces décisions dans le Controller ou le Repository.
 
@@ -249,13 +308,15 @@ Tester en priorité :
 
 ## État d'avancement (à mettre à jour après chaque session significative)
 
-### Branche active : `feature/auth-intervenant`
+### Branches
 
-`main` et `dev` contiennent uniquement le commit initial (squelette vide). Tout le travail réalisé est sur `feature/auth-intervenant`, non encore mergée.
+- `main` : squelette initial uniquement.
+- `dev` : contient `auth` complète (merge de `feature/auth-intervenant`).
+- `feature/prestations` : branche active — travail en cours sur `prestation`.
 
-### Feature `auth` — implémentée, nettoyée, prête à merger
+### Feature `auth` — [EXISTE] mergée dans `dev`
 
-Implémenté et committé :
+Committé sur `dev` :
 
 - `Intervenant` entity (id, prenom, email, passwordHash)
 - `IntervenantRepository` (`findByEmail`)
@@ -267,21 +328,11 @@ Implémenté et committé :
 - `WebConfig` (CORS configuré via `FRONTEND_URL`)
 - `LoginRequestDto` (record, `@NotBlank`, `@Email`, `@Size`)
 - `IntervenantNotFoundException` (extends `UsernameNotFoundException`)
-- Migration Flyway `V2` : table `intervenant`
+- Migration Flyway V2 : table `intervenant`
 
-Non implémenté (hors périmètre de cette feature) : `GET /auth/me` n'existe pas. Il a été utilisé uniquement comme route protégée arbitraire lors des tests manuels curl pour vérifier qu'une requête sans session retourne bien 401.
+`GET /auth/me` : absent des deux branches vérifiées (`dev` et `feature/prestations`).
 
-Corrections appliquées en session (non encore committées) :
-
-- 403 → 401 pour les requêtes non authentifiées : `AuthenticationEntryPoint` personnalisé dans `exceptionHandling()`
-- Corps d'erreur JSON structuré avec encodage UTF-8
-- `GET /auth/csrf` ajouté pour exposer le token CSRF avant login (nécessaire avec la génération lazy de Spring Security 6+)
-- `CsrfTokenRequestAttributeHandler` configuré (corrige le bug XOR du handler par défaut)
-- `AuthDto.java` supprimé (classe vide, aucun usage)
-- Import `AbstractHttpConfigurer` inutilisé supprimé de `SecurityConfig`
-- Propriétés erreur corrigées : `spring.web.error.*` (Spring Boot 4.x)
-
-Tests manuels effectués le 2026-09-07 (curl + PostgreSQL réel), état après corrections :
+Tests manuels effectués le 2026-09-07 (curl + PostgreSQL réel) :
 
 | Test | Résultat | Attendu | OK ? |
 |---|---|---|---|
@@ -290,25 +341,32 @@ Tests manuels effectués le 2026-09-07 (curl + PostgreSQL réel), état après c
 | `POST /auth/login` bon mdp | 200 + JSESSIONID | 200 | Oui |
 | Route protégée inconnue avec cookie | 404 sans trace Java | 404 | Oui |
 
-Tests automatisés (`@WebMvcTest`) : **7/7 — BUILD SUCCESS**
+Tests automatisés :
+- `AuthControllerTest` (`@WebMvcTest`) : 6/6 — PASS
+  - `routeProtegee_sansAuthentification_renvoie401`
+  - `login_identifiantsValides_renvoie200`
+  - `login_mauvaisMotDePasse_renvoie401`
+  - `login_motDePasseTropCourt_renvoie400`
+  - `login_sansTokenCsrf_renvoie403`
+  - `login_identifiantsValides_sauvegardeContexteSecurite`
+- `BackendApplicationTests#contextLoads` (`@SpringBootTest`) : FAIL — l'exécution Maven complète échoue sur ce test. Le test tente de démarrer l'application complète ; cause probable : absence de datasource dans l'environnement de test. Diagnostic à confirmer.
 
-- `routeProtegee_sansAuthentification_renvoie401`
-- `login_identifiantsValides_renvoie200`
-- `login_mauvaisMotDePasse_renvoie401`
-- `login_motDePasseTropCourt_renvoie400`
-- `login_sansTokenCsrf_renvoie403`
-- `login_identifiantsValides_sauvegardeContexteSecurite`
-- `BackendApplicationTests#contextLoads`
+### Feature `prestation` — [EXISTE] implémentation partielle sur `feature/prestations`
 
-Reste à faire avant merge :
+Committé :
 
-- Commit du nettoyage en attente (modifications non stagées)
+- `Prestation` entity JPA (id, nom, description, active, typeTarification, prixMinimum)
+- `TypeTarification` enum (FIXE, DEVIS)
+- `PrestationRepository` (étend `JpaRepository`)
+- `PrestationService` : `findById` et `save` présents — `save` contient une validation métier partielle (nom, description, typeTarification vérifiés manuellement), sans Bean Validation
+- `PrestationController` (`GET /prestations/{id}`)
+- `PrestationDto` (record, 6 champs)
+- `PrestationNotFoundException`, `PrestationValidationException`, `PrestationExceptionHandler`
+- Migrations V3 (type `tarif` + table `prestation`), V4 (vide — variantes non implémentées)
 
-### Feature `prestation` — squelettes vides uniquement
+Non committé dans le working tree : corrections de conventions (`isActive`, nommage DTO, import inutilisé). `VarianteTarifaire.java` supprimée du working tree — la migration V4 reste en place. L'implémentation complète de `VarianteTarifaire` est à réaliser (concept validé, voir « Règles de tarification »).
 
-Présents dans le code mais vides : `PrestationController`, `Prestation`, `PrestationDto`.
-Migration `V1` : fichier SQL vide.
-À implémenter en entier après le merge de `auth` dans `dev`.
+Reste à faire : `POST /prestations`, `GET /prestations` (liste), Bean Validation sur le DTO d'entrée, tests `@WebMvcTest`.
 
 ### Features non commencées
 
