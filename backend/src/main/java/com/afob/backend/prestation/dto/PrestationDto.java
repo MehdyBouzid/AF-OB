@@ -6,6 +6,6 @@ public record PrestationDto(
     String nom,
     String description,
     boolean active,
-    TypeTarification TypeTarification,
+    TypeTarification typeTarification,
     BigDecimal prixMinimum
 ) {}

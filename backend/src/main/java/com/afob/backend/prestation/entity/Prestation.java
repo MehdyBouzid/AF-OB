@@ -56,7 +56,7 @@ public class Prestation {
         this.description = description;
     }
 
-    public boolean getActive() {
+    public boolean isActive() {
         return active;
     }
 
