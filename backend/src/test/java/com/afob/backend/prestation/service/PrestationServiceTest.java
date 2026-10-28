@@ -3,6 +3,7 @@ package com.afob.backend.prestation.service;
 import com.afob.backend.prestation.dto.PrestationRequestDto;
 import com.afob.backend.prestation.entity.Prestation;
 import com.afob.backend.prestation.entity.TypeTarification;
+import com.afob.backend.prestation.exception.PrestationNotFoundException;
 import com.afob.backend.prestation.exception.PrestationValidationException;
 import com.afob.backend.prestation.repository.PrestationRepository;
 import org.junit.jupiter.api.Test;
@@ -168,5 +169,82 @@ class PrestationServiceTest {
         assertNull(enregistree.getPrixMinimum());
         assertEquals(1L, enregistree.getId());
         assertSame(enregistree, resultat);
+    }
+
+    // --- BE-6 : cas d'erreur de updatePrestation() : rien ne doit être enregistré ni modifié ---
+
+    @Test
+    void updatePrestation_prestationIntrouvable_leveNotFoundEtNEnregistreRien() {
+        when(prestationRepository.findById(999999L)).thenReturn(Optional.empty());
+        PrestationRequestDto demande = new PrestationRequestDto("Vitres", "Nettoyage", TypeTarification.DEVIS, null);
+
+        assertThrows(PrestationNotFoundException.class, () -> prestationService.updatePrestation(999999L, demande));
+
+        verify(prestationRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "   "})
+    void updatePrestation_nomAbsentOuVide_leveUneErreurDeValidationSansRienModifier(String nom) {
+        Prestation existante = prestation("Vitres", "Nettoyage vitres", TypeTarification.DEVIS, new BigDecimal("60.00"));
+        when(prestationRepository.findById(1L)).thenReturn(Optional.of(existante));
+        PrestationRequestDto demande = new PrestationRequestDto(nom, "Autre description", TypeTarification.FIXE, null);
+
+        assertThrows(PrestationValidationException.class, () -> prestationService.updatePrestation(1L, demande));
+
+        verify(prestationRepository, never()).save(any());
+        assertEquals("Vitres", existante.getNom());
+        assertEquals(TypeTarification.DEVIS, existante.getTypeTarification());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "   "})
+    void updatePrestation_descriptionAbsenteOuVide_leveUneErreurDeValidationSansRienModifier(String description) {
+        Prestation existante = prestation("Vitres", "Nettoyage vitres", TypeTarification.DEVIS, new BigDecimal("60.00"));
+        when(prestationRepository.findById(1L)).thenReturn(Optional.of(existante));
+        PrestationRequestDto demande = new PrestationRequestDto("Autre nom", description, TypeTarification.FIXE, null);
+
+        assertThrows(PrestationValidationException.class, () -> prestationService.updatePrestation(1L, demande));
+
+        verify(prestationRepository, never()).save(any());
+        assertEquals("Nettoyage vitres", existante.getDescription());
+        assertEquals(TypeTarification.DEVIS, existante.getTypeTarification());
+    }
+
+    @Test
+    void updatePrestation_typeTarificationAbsent_leveUneErreurDeValidationSansRienModifier() {
+        Prestation existante = prestation("Vitres", "Nettoyage vitres", TypeTarification.DEVIS, new BigDecimal("60.00"));
+        when(prestationRepository.findById(1L)).thenReturn(Optional.of(existante));
+        PrestationRequestDto demande = new PrestationRequestDto("Autre nom", "Autre description", null, null);
+
+        assertThrows(PrestationValidationException.class, () -> prestationService.updatePrestation(1L, demande));
+
+        verify(prestationRepository, never()).save(any());
+        assertEquals("Vitres", existante.getNom());
+        assertEquals(new BigDecimal("60.00"), existante.getPrixMinimum());
+    }
+
+    // FIXE -> DEVIS : le nouveau prixMinimum de la demande est conservé (seul FIXE force null), et nom/description changent.
+    @Test
+    void updatePrestation_fixeVersDevisAvecPrixMinimum_appliqueLesNouvellesValeurs() {
+        Prestation existante = prestation("Canapé", "Nettoyage canapé", TypeTarification.FIXE, null);
+        ReflectionTestUtils.setField(existante, "id", 7L);
+        PrestationRequestDto demande = new PrestationRequestDto("Intérieur véhicule", "Nettoyage intérieur",
+                TypeTarification.DEVIS, new BigDecimal("60.00"));
+        when(prestationRepository.findById(7L)).thenReturn(Optional.of(existante));
+        when(prestationRepository.save(any(Prestation.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        prestationService.updatePrestation(7L, demande);
+
+        ArgumentCaptor<Prestation> captor = ArgumentCaptor.forClass(Prestation.class);
+        verify(prestationRepository).save(captor.capture());
+        Prestation enregistree = captor.getValue();
+        assertEquals("Intérieur véhicule", enregistree.getNom());
+        assertEquals("Nettoyage intérieur", enregistree.getDescription());
+        assertEquals(TypeTarification.DEVIS, enregistree.getTypeTarification());
+        assertEquals(new BigDecimal("60.00"), enregistree.getPrixMinimum());
+        assertEquals(7L, enregistree.getId());
     }
 }
