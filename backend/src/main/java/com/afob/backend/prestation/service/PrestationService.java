@@ -4,6 +4,7 @@ import com.afob.backend.prestation.exception.PrestationNotFoundException;
 import com.afob.backend.prestation.exception.PrestationValidationException;
 import com.afob.backend.prestation.entity.Prestation;
 import com.afob.backend.prestation.entity.TypeTarification;
+import com.afob.backend.prestation.dto.PrestationRequestDto;
 
 import org.springframework.stereotype.Service;
 import com.afob.backend.prestation.repository.PrestationRepository;
@@ -42,6 +43,32 @@ public class PrestationService {
     }
 
     return prestationRepository.save(prestation);
+  }
+
+  public Prestation updatePrestation(Long id, PrestationRequestDto nouvelleDonnee) {
+    Prestation prestationExistante = findById(id);
+
+    if (nouvelleDonnee.nom() == null || nouvelleDonnee.nom().isBlank()) {
+      throw new PrestationValidationException("Le nom est obligatoire");
+    }
+    if (nouvelleDonnee.description() == null || nouvelleDonnee.description().isBlank()) {
+      throw new PrestationValidationException("La description est obligatoire");
+    }
+    if (nouvelleDonnee.typeTarification() == null) {
+      throw new PrestationValidationException("Le type de tarification est obligatoire");
+    }
+    if (nouvelleDonnee.typeTarification() == TypeTarification.FIXE) {
+      prestationExistante.setPrixMinimum(null);
+    } else {
+      prestationExistante.setPrixMinimum(nouvelleDonnee.prixMinimum());
+    }
+
+    prestationExistante.setNom(nouvelleDonnee.nom());
+    prestationExistante.setDescription(nouvelleDonnee.description());
+    prestationExistante.setTypeTarification(nouvelleDonnee.typeTarification());
+
+    return prestationRepository.save(prestationExistante);
+
   }
 
 }

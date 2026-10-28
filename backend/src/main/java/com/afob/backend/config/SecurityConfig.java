@@ -1,5 +1,4 @@
 package com.afob.backend.config;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -54,7 +53,6 @@ public class SecurityConfig {
             response.getWriter().write("{\"message\":\"Non authentifié\"}");
 
         }));
-
         return http.build();
     }
 
