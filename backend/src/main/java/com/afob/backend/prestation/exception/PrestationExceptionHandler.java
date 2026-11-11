@@ -1,5 +1,7 @@
 package com.afob.backend.prestation.exception;
 
+import com.afob.backend.prestation.exception.notfound.PrestationNotFoundException;
+import com.afob.backend.prestation.exception.validation.PrestationValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;

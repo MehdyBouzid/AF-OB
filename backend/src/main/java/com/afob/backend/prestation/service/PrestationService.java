@@ -1,7 +1,7 @@
 package com.afob.backend.prestation.service;
 
-import com.afob.backend.prestation.exception.PrestationNotFoundException;
-import com.afob.backend.prestation.exception.PrestationValidationException;
+import com.afob.backend.prestation.exception.notfound.PrestationNotFoundException;
+import com.afob.backend.prestation.exception.validation.PrestationValidationException;
 import com.afob.backend.prestation.entity.Prestation;
 import com.afob.backend.prestation.entity.TypeTarification;
 import com.afob.backend.prestation.dto.PrestationRequestDto;
