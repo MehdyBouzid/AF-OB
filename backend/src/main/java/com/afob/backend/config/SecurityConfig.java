@@ -41,7 +41,10 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain web(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(authorize -> authorize.requestMatchers("/auth/login","/auth/csrf").permitAll().anyRequest().authenticated())
+        http.authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/auth/login", "/auth/csrf").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .anyRequest().authenticated())
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
