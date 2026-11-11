@@ -5,10 +5,9 @@ import com.afob.backend.config.SecurityConfig;
 import com.afob.backend.prestation.entity.Prestation;
 import com.afob.backend.prestation.entity.TypeTarification;
 import com.afob.backend.prestation.dto.PrestationRequestDto;
-import com.afob.backend.prestation.exception.PrestationNotFoundException;
-import com.afob.backend.prestation.exception.PrestationValidationException;
+import com.afob.backend.prestation.exception.notfound.PrestationNotFoundException;
+import com.afob.backend.prestation.exception.validation.PrestationValidationException;
 import com.afob.backend.prestation.service.PrestationService;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,7 +82,7 @@ class PrestationControllerTest {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(CORPS_DEVIS_VALIDE))
-                .andExpect(status().is2xxSuccessful())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.nom").value("Vitres"))
                 .andExpect(jsonPath("$.description").value("Nettoyage des vitres"))
                 .andExpect(jsonPath("$.typeTarification").value("DEVIS"))
@@ -127,8 +126,8 @@ class PrestationControllerTest {
         verify(prestationService, never()).save(any());
     }
 
-    // Convention du projet : 201 pour une création. Le controller renvoie aujourd'hui 200.
-    @Disabled("Convention non appliquée : POST /prestations renvoie 200 au lieu de 201")
+    // Convention du projet : 201 pour une création. Vérifié : @ResponseStatus(CREATED) est bien appliqué
+    // (le test était désactivé depuis une ancienne version du Controller qui renvoyait 200 ; ce n'est plus le cas).
     @Test
     void creer_donneesValides_renvoie201() throws Exception {
         when(prestationService.save(any(Prestation.class))).thenAnswer(inv -> inv.getArgument(0));
