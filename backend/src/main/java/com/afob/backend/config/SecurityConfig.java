@@ -1,5 +1,4 @@
 package com.afob.backend.config;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -42,7 +41,11 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain web(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(authorize -> authorize.requestMatchers("/auth/login","/auth/csrf").permitAll().anyRequest().authenticated())
+        http.authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/auth/login", "/auth/csrf").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .anyRequest().authenticated())
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
@@ -54,7 +57,6 @@ public class SecurityConfig {
             response.getWriter().write("{\"message\":\"Non authentifié\"}");
 
         }));
-
         return http.build();
     }
 

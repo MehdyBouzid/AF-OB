@@ -1,5 +1,5 @@
 package com.afob.backend.auth.service;
-import com.afob.backend.auth.exception.IntervenantNotFoundException;
+import com.afob.backend.auth.exception.notfound.IntervenantNotFoundException;
 import com.afob.backend.auth.entity.Intervenant;
 import com.afob.backend.auth.repository.IntervenantRepository;
 import org.springframework.stereotype.Service;
