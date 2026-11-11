@@ -43,6 +43,7 @@ public class SecurityConfig {
     public SecurityFilterChain web(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/auth/login", "/auth/csrf").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .csrf(csrf -> csrf

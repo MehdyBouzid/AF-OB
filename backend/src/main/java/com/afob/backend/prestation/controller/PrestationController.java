@@ -1,5 +1,6 @@
 package com.afob.backend.prestation.controller;
 
+import com.afob.backend.prestation.documentation.PrestationApiDoc;
 import com.afob.backend.prestation.dto.PrestationDto;
 import com.afob.backend.prestation.dto.PrestationRequestDto;
 import com.afob.backend.prestation.entity.Prestation;
@@ -16,13 +17,14 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 @RestController
 @RequestMapping("/prestations")
-public class PrestationController {
+public class PrestationController implements PrestationApiDoc {
     private final PrestationService prestationService;
 
     public PrestationController(PrestationService prestationService) {
         this.prestationService = prestationService;
     }
 
+    @Override
     @GetMapping("/{id}")
     public PrestationDto getById(@PathVariable Long id) {
         Prestation prestation = prestationService.findById(id);
@@ -35,6 +37,7 @@ public class PrestationController {
                 prestation.getPrixMinimum());
     }
 
+    @Override
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PrestationDto CreatePrestationDto(@RequestBody PrestationRequestDto dto) {
@@ -57,6 +60,7 @@ public class PrestationController {
                 prestationSauvegardee.getPrixMinimum());
     }
 
+    @Override
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     public PrestationDto updatePrestation(

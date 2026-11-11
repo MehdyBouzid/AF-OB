@@ -1,5 +1,6 @@
 package com.afob.backend.prestation.controller;
 
+import com.afob.backend.prestation.documentation.FormuleTarifaireApiDoc;
 import com.afob.backend.prestation.dto.FormuleTarifaireDto;
 import com.afob.backend.prestation.entity.FormuleTarifaire;
 import com.afob.backend.prestation.service.FormuleTarifaireService;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/prestations/{prestationId}/formules-tarifaires")
-public class FormuleTarifaireController {
+public class FormuleTarifaireController implements FormuleTarifaireApiDoc {
 
     private final FormuleTarifaireService formuleTarifaireService;
 
@@ -21,6 +22,7 @@ public class FormuleTarifaireController {
         this.formuleTarifaireService = formuleTarifaireService;
     }
 
+    @Override
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public FormuleTarifaireDto create(@PathVariable Long prestationId, @RequestBody FormuleTarifaireDto dto) {

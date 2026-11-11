@@ -1,4 +1,5 @@
 package com.afob.backend.auth.controller;
+import com.afob.backend.auth.documentation.AuthApiDoc;
 import com.afob.backend.auth.dto.LoginRequestDto;
 import com.afob.backend.auth.service.AuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,7 +19,7 @@ import org.springframework.security.web.csrf.CsrfToken;
 
 @RestController
 @RequestMapping("/auth")
-public class AuthController {
+public class AuthController implements AuthApiDoc {
 
     private final AuthenticationService authenticationService;
     private final SecurityContextRepository securityContextRepository;
@@ -31,6 +32,7 @@ public class AuthController {
         this.securityContextRepository = securityContextRepository;
     }
 
+    @Override
     @PostMapping("/login")
     public ResponseEntity<Void> login(
             @RequestBody @Valid LoginRequestDto request,
@@ -58,6 +60,8 @@ public class AuthController {
 
         return ResponseEntity.ok().build();
     }
+
+    @Override
     @GetMapping("/csrf")
     public ResponseEntity<Void> csrf(CsrfToken csrfToken) {
         csrfToken.getToken();
